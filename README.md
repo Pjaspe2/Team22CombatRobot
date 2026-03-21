@@ -1,5 +1,7 @@
 # Team22CombatRobot
 Anything related to combat robot code
+(AI assisted code writing)
+
 # Pi + Pixhawk (ArduRover) + BlueOS + QGroundControl
 
 Living notes for this combat rover stack: **Pixhawk** runs **ArduPilot Rover**, **QGroundControl (QGC)** is the ground station, **BlueOS** on the **Raspberry Pi** bridges MAVLink (and optional video) over Wi‑Fi/Ethernet. Update the **Verified working** and **Versions** sections when you confirm each milestone—not every small tweak.
