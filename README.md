@@ -37,16 +37,16 @@ flowchart LR
 
 ---
 
-## Hardware (fill in as you lock it down)
+## Hardware
 
 | Item | Your notes |
 |------|------------|
-| Raspberry Pi model | e.g. 4B / 5 |
-| Pixhawk / FC board | |
-| Pi power | How the Pi is powered (buck from PDB, separate pack, etc.) |
+| Raspberry Pi model | **4B** (use **ARMv7 Bullseye Pi 4** BlueOS image) |
+| Pixhawk / FC board | 6c|
+| Pi power | separate pack 2s Battery|
 | Pi ↔ Pixhawk link | **USB** (data-capable cable; avoid charge-only) |
 | Pi camera | Module 2 / 3 / HQ / other |
-| Network | Pi as AP vs Pi + laptop on same router |
+| Network | Wi‑Fi: home SSID + lab SSID (see [WiFi home ↔ lab](#wifi-home--lab)); laptop + Pi on same LAN for QGC |
 
 ---
 
@@ -54,10 +54,11 @@ flowchart LR
 
 | Component | Version |
 |-----------|---------|
-| BlueOS | e.g. [1.4.3](https://github.com/bluerobotics/BlueOS/releases) — update when you flash/upgrade |
+| BlueOS | **[1.4.3](https://github.com/bluerobotics/BlueOS/releases/tag/1.4.3)** (update via Version Chooser after boot) |
+| BlueOS SD image (Pi 4B) | **`BlueOS-raspberry-linux-arm-v7-bullseye-pi4.zip`** from [release assets](https://github.com/bluerobotics/BlueOS/releases/tag/1.4.3) |
 | ArduPilot Rover (FC) | |
 | QGroundControl | |
-| Raspberry Pi OS base (if shown in BlueOS About) | |
+| Raspberry Pi OS base (if shown in BlueOS About) | Bullseye (32-bit ARMv7) under BlueOS |
 
 ---
 
@@ -71,19 +72,87 @@ flowchart LR
 
 ---
 
-## Phase 1 — Flash BlueOS on the Pi
+## Phase 1 — Flash BlueOS on the Pi 4B
 
-BlueOS is headless; you use the **web UI** after boot (see Getting Started). Official install summary:
+BlueOS is **headless**; you configure it through the **web UI** after boot ([Getting Started](https://blueos.cloud/docs/stable/usage/getting-started/)).
 
-1. **Pick the image** for your **exact** Pi from the [installation table](https://blueos.cloud/docs/stable/usage/installation/) and [GitHub Releases assets](https://github.com/bluerobotics/BlueOS/releases):
-   - **Raspberry Pi 3B / 4B:** ARMv7 (32-bit) Bullseye — common default for Blue Robotics vehicles.
-   - **Raspberry Pi 5:** ARMv8 (64-bit) Bookworm — noted as **limited testing** upstream; record issues in this README.
-2. **Flash** a fresh SD card (≥ 4 GB; Class 10+ recommended) with [Balena Etcher](https://etcher.balena.io/) or similar.
-3. **Boot** the Pi; first boot may take **~2 minutes** while the filesystem expands.
-4. **Open the web UI** per [Getting Started](https://blueos.cloud/docs/stable/usage/getting-started/) — typically `http://blueos.local` on the same LAN, or the Pi’s IP.
-5. **Update** BlueOS from the **Version Chooser** when the base system is up ([advanced docs](https://blueos.cloud/docs/stable/usage/advanced/)).
+### Image to download (Pi 4B)
 
-**Record here after first success:** image filename, SD size, Pi model, how you reach the UI (hostname/IP).
+For a **Raspberry Pi 4B**, use the **32-bit ARMv7 Bullseye** image named for Pi 4:
+
+| Item | Value |
+|------|--------|
+| Release | [BlueOS 1.4.3](https://github.com/bluerobotics/BlueOS/releases/tag/1.4.3) (or newer **stable** from [releases](https://github.com/bluerobotics/BlueOS/releases)) |
+| Asset file | **`BlueOS-raspberry-linux-arm-v7-bullseye-pi4.zip`** |
+
+Do **not** use the Pi 5 / ARM64 Bookworm image on a 4B. If BlueOS adds a newer zip with the same naming pattern, prefer the **`…bullseye-pi4.zip`** asset for Pi 4B.
+
+### Flash steps (walkthrough)
+
+1. **SD card:** Use a **fresh** card, **≥ 16 GB** recommended (4 GB minimum per docs; more is easier for logs/updates). Quality Class 10 or better.
+2. **Download** the zip from the release page above.
+3. **Flash with [Balena Etcher](https://etcher.balena.io/)** (or Raspberry Pi Imager if you prefer—Etcher is what BlueOS docs recommend):
+   - Etcher can flash from **`.zip`** directly; if you only see an **`.img`** inside the zip, extract once and select the **`.img`**.
+   - Select the correct **drive** (your SD reader)—double-check so you do not wipe the wrong disk.
+4. **Eject** the card cleanly, insert into the **Pi 4B**, connect **power** (and **Ethernet** if you want the simplest first connection—see below).
+5. **First boot:** Wait **~2 minutes** (filesystem expand). Green activity on the Pi is normal.
+
+### How to open the BlueOS web UI the first time
+
+Per [BlueOS Getting Started — Interface Access](https://blueos.cloud/docs/stable/usage/getting-started/#interface-access):
+
+| How Pi is connected | Try this in your browser |
+|---------------------|---------------------------|
+| **Ethernet** to your router/switch (same LAN as your laptop) | `http://blueos.local` or `http://blueos-ethernet.local` or `http://192.168.2.2` (static Ethernet IP documented by BlueOS) |
+| **No Wi‑Fi configured** within **~5 minutes** of boot | Pi starts a **hotspot**: SSID **`BlueOS (******)`** (suffix varies), password **`blueosap`** → then `http://blueos-hotspot.local` |
+| **USB-C from Pi 4 to computer** (data only; Pi still needs its own power) | `http://blueos.local` (see [USB OTG](https://blueos.cloud/docs/stable/usage/getting-started/#usb-otg); Pi draws a lot of power—do not rely on laptop USB for power) |
+
+**Practical first-time tip:** If you can, use **Ethernet** for the first boot so your laptop and Pi share the same network without fighting Wi‑Fi. Then use the **Wi‑Fi icon** in the BlueOS header to join your **home** network ([WiFi home ↔ lab](#wifi-home--lab)).
+
+6. On your **laptop** (on the same LAN, or connected to the Pi **hotspot**, or via **USB-OTG** as in the table), open the matching URL in a browser—**`http://blueos.local`**, or **`http://blueos-hotspot.local`** on the hotspot, or **`http://192.168.2.2`** on Ethernet—until the BlueOS dashboard loads.
+7. Complete the **setup wizard** if shown (you can skip later once things work; internet on the Pi helps updates).
+8. **Update** BlueOS from **Settings → BlueOS Version** ([Version Chooser](https://blueos.cloud/docs/stable/usage/advanced/#blueos-version)) once the Pi has internet.
+
+**Record here after first success:** SD size, exact zip filename you flashed, and which URL worked (`blueos.local` / IP / hotspot).
+
+---
+
+## WiFi home ↔ lab
+
+You will move between **home** and **lab** networks. The goal is: **your laptop and the Pi on the same IP network** so `blueos.local` (mDNS) or the Pi’s **IP** works, and QGroundControl can reach the Pi.
+
+### Connect Wi‑Fi from BlueOS (any location)
+
+From [Connect Wifi](https://blueos.cloud/docs/stable/usage/getting-started/#connect-wifi):
+
+1. Open the BlueOS web UI (however you reached it: Ethernet, hotspot, or existing Wi‑Fi).
+2. Click the **Wi‑Fi indicator** in the header → **scan** → select the **SSID** → enter password → **Connect**.
+3. After it connects, the icon shows signal strength; the Pi should have a route to the internet if that network provides it (useful for updates).
+
+### Switching from home to lab (and back)
+
+- **Add both networks over time:** Each time you are on a new site, open the Wi‑Fi menu again and connect to that SSID. Linux **NetworkManager** (used under BlueOS) usually **keeps saved networks** and will connect to whichever is in range (priority may favor the last working one).
+- **At the lab:** Power the Pi, wait for boot, connect your **laptop to the lab Wi‑Fi** (or Ethernet on the same subnet). If the Pi auto-joins the lab SSID you saved, open **`http://blueos.local`** or check your router’s DHCP client list for the Pi’s **IP** if mDNS is flaky.
+- **If the Pi cannot join lab Wi‑Fi** (new SSID never saved): use **Ethernet** to a router/switch, or connect your laptop to the Pi’s **BlueOS hotspot** and add the lab network from the UI (laptop may need to reconnect to lab Wi‑Fi afterward for QGC on the same LAN as the Pi—see below).
+
+### QGroundControl reminder when the IP changes
+
+If you pointed QGC at a **specific Pi IP** from home, the Pi may get a **different IP** at the lab. Either:
+
+- Use **`blueos.local`** in links where QGC allows a hostname, or  
+- **Update the comm link** to the new IP from the lab router’s admin page or `arp`/`nmap` scan.
+
+Fill these in when stable:
+
+| Location | Wi‑Fi SSID (or “Ethernet”) | Pi IP or hostname used |
+|----------|----------------------------|-------------------------|
+| Home | | |
+| Lab | | |
+
+### Optional: make lab access predictable
+
+- **DHCP reservation** on the lab router for the Pi’s MAC address → same IP every time at the lab.  
+- **USB-C Ethernet gadget** from Pi to laptop for “always works” access without Wi‑Fi ([USB OTG](https://blueos.cloud/docs/stable/usage/getting-started/#usb-otg)); still put Pi + laptop on a shared network for QGC unless you bridge routes manually.
 
 ---
 
